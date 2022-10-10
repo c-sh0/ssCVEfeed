@@ -15,7 +15,7 @@ include 'header.inc';
 // note: php.ini - date.timezone
 $lDateTime = date("D F j, Y, g:i:sa (T)");
 $nvdApi = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
-$tsFile = '/tmp/cve-feed-last_reload.ts';
+$tsFile = '/tmp/cve-feed-last_read.ts';
 $pName  = basename(__FILE__);
 $ePoch  = null;
 $sslOptions=array(
