@@ -11,7 +11,9 @@
 * 10/08/22
 -------------------------------------------------------------
 */
-include 'header.inc';
+include('header.inc');
+include('cpe_filter.inc');
+
 // note: php.ini - date.timezone
 $lDateTime = date("D F j, Y, g:i:sa (T)");
 $nvdApi = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
@@ -24,6 +26,28 @@ $sslOptions=array(
         "verify_peer_name"=>false,
     ),
 );
+
+function do_filter($cve) {
+		global $cpe_filter;
+
+		// Skip Rejected
+		if(preg_match("/Rejected/i",$cve['vulnStatus'])) {
+			return(1);
+		}
+
+		if(isset($cve['configurations'][0]['nodes'][0]['cpeMatch'][0]['criteria'])) {
+			$cpe = $cve['configurations'][0]['nodes'][0]['cpeMatch'][0]['criteria'];
+
+			foreach($cpe_filter as $filter) {
+				if(preg_match("/$filter/i",$cpe)) {
+					return(1);
+				}
+			}
+		}
+
+	return(0);
+}
+
 
 function do_epoch($f, $m) {
         $ts = time();
@@ -80,9 +104,18 @@ if($jsnObj['totalResults'] > 0) {
 
 	print("<center>");
 	foreach($jsnObj['vulnerabilities'] as $vuln) {
-                $cvssv3  = '';
+
+		// check filter config
+		if(do_filter($vuln['cve'])) {
+			continue;
+		}
+
 		$cveId   = $vuln['cve']['id'];
+		$cvssv3  = '';
+		$vStatus = $vuln['cve']['vulnStatus'];
 		$cveDesc = $vuln['cve']['descriptions'][0]['value'];
+		//$pubDate = $vuln['cve']['published'];
+		//$modDate = $vuln['cve']['lastModified'];
 
                 if(is_array($vuln['cve']['metrics'])) {
 			if(isset($vuln['cve']['metrics']['cvssMetricV31'][0])) {
@@ -91,10 +124,11 @@ if($jsnObj['totalResults'] > 0) {
 				$cvssv3 = $vuln['cve']['vulnStatus'];
 			}
                 }
+
 		print("<table>
 				<tr>
 				<th><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://nvd.nist.gov/vuln/detail/$cveId\">$cveId</a></th>
-				<td>CVSSv3: $cvssv3</td>
+				<td>CVSS: $cvssv3</td>
 				</tr>
 			</table>
 			<table>
@@ -125,6 +159,6 @@ if($jsnObj['totalResults'] > 0) {
 	print("Count: 0<br>");
 }
 
-include 'footer.inc';
+include('footer.inc');
 ?>
 
